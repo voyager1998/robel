@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Turn tasks with DClaw robots.
 
 This is a single rotation of an object from an initial angle to a target angle.
@@ -43,11 +42,11 @@ DEFAULT_OBSERVATION_KEYS = (
 RESET_POSE = [0, -np.pi / 3, np.pi / 3] * 3
 
 DCLAW3_ASSET_PATH = 'robel/dclaw/assets/dclaw3xh_valve3_v0.xml'
+DCLAW4_ASSET_PATH = 'robel/dclaw/assets/dclaw3xh_valve4_v0.xml'
 
 
 class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     """Shared logic for DClaw turn tasks."""
-
     def __init__(self,
                  asset_path: str = DCLAW3_ASSET_PATH,
                  observation_keys: Sequence[str] = DEFAULT_OBSERVATION_KEYS,
@@ -138,9 +137,9 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         return obs_dict
 
     def get_reward_dict(
-            self,
-            action: np.ndarray,
-            obs_dict: Dict[str, np.ndarray],
+        self,
+        action: np.ndarray,
+        obs_dict: Dict[str, np.ndarray],
     ) -> Dict[str, np.ndarray]:
         """Returns the reward for the given action and observation."""
         target_dist = np.abs(obs_dict['target_error'])
@@ -164,9 +163,9 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         return reward_dict
 
     def get_score_dict(
-            self,
-            obs_dict: Dict[str, np.ndarray],
-            reward_dict: Dict[str, np.ndarray],
+        self,
+        obs_dict: Dict[str, np.ndarray],
+        reward_dict: Dict[str, np.ndarray],
     ) -> Dict[str, np.ndarray]:
         """Returns a standardized measure of success for the environment."""
         target_dist = np.abs(obs_dict['target_error'])
@@ -182,7 +181,8 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             ))
         return score_dict
 
-    def _set_target_object_pos(self, target_pos: float,
+    def _set_target_object_pos(self,
+                               target_pos: float,
                                unbounded: bool = False):
         """Sets the goal angle to the given position."""
         # Modulo to [-pi, pi].
@@ -199,7 +199,6 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 @configurable(pickleable=True)
 class DClawTurnFixed(BaseDClawTurn):
     """Turns the object with a fixed initial and fixed target position."""
-
     def _reset(self):
         # Turn from 0 degrees to 180 degrees.
         self._initial_object_pos = 0
@@ -210,7 +209,6 @@ class DClawTurnFixed(BaseDClawTurn):
 @configurable(pickleable=True)
 class DClawTurnRandom(BaseDClawTurn):
     """Turns the object with a random initial and random target position."""
-
     def _reset(self):
         # Initial position is +/- 60 degrees.
         self._initial_object_pos = self.np_random.uniform(
@@ -227,7 +225,6 @@ class DClawTurnRandomDynamics(DClawTurnRandom):
 
     The dynamics of the simulation are randomized each episode.
     """
-
     def __init__(self,
                  *args,
                  sim_observation_noise: Optional[float] = 0.05,
@@ -270,3 +267,30 @@ class DClawTurnRandomDynamics(DClawTurnRandom):
             color_range=(0.2, 0.9),
         )
         super()._reset()
+
+
+if __name__ == "__main__":
+    import time
+
+    # Create a simulation environment for the D'Claw turn task.
+    # env = gym.make('DClawTurnFixed-v0')
+    env = DClawTurnFixed(asset_path=DCLAW4_ASSET_PATH)
+
+    # Create a hardware environment for the D'Claw turn task.
+    # `device_path` refers to the device port of the Dynamixel USB device.
+    # e.g. '/dev/ttyUSB0' for Linux, '/dev/tty.usbserial-*' for Mac OS.
+    # env = gym.make('DClawTurnFixed-v0', device_path='/dev/ttyUSB1')
+
+    print(env.action_space.shape)
+    print(env.observation_space.shape)
+    for i in range(1000):
+        env.reset()
+        for t in range(20):
+            # action = np.zeros(env.action_space.shape)
+            # action[2] = i * 0.1
+            action = env.action_space.sample()
+
+            obs, reward, done, info = env.step(action)
+
+            env.render("human")
+            time.sleep(0.03)
